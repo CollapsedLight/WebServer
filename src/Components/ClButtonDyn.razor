@@ -1,0 +1,41 @@
+@using CollapsedLight.WebApp.Components.Styles;
+
+<div name="@nameof(ClButtonDyn)" class="@(_class) @(_style.Button)">
+    <button class="w-full h-8" @onclick="@(OnClick)">
+        <p class="@(_style.TextStyle)">@(_style.Text)</p>
+        @(ChildContent)
+    </button>
+</div>
+
+@code
+{
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    /// <summary>
+    ///     Callback event of the button
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    [Parameter]
+    public Func<ClButtonDyn, ButtonStyle> Style { get; set; }
+
+    private string _class = string.Empty;
+    private ButtonStyle _style;
+
+    protected override void OnParametersSet()
+    {
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+
+        _style = Style(this);
+    }
+}
