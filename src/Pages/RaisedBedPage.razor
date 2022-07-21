@@ -1,0 +1,123 @@
+@using MQTTnet.Extensions.ManagedClient
+@using MQTTnet
+
+@page "/raised-bed"
+@inject ControlerMqttHandler Controler
+@inject IStringLocalizer Localizer;
+
+<div class="flex flex-col justify-content-center p-3">
+
+    <div class="grid grid-cols-2 gap-3">
+        @foreach (var sensor in Enumerable.Range(0, 2))
+        {
+            <div class="flex flex-col gap-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <ClButton @onclick="@(_ => GetLimit(_sensor[sensor], "GetMin"))">@(Localizer["get min"])</ClButton>
+                    <ClButton @onclick="@(_ => GetLimit(_sensor[sensor], "GetMax"))">@(Localizer["get max"])</ClButton>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <ClInput @bind-Value="@(_minCalibration[sensor])"></ClInput>
+                    <ClButton @onclick="@(_ => SetLimit(_sensor[sensor], "SetMin", _minCalibration[sensor]))">@(Localizer["set min"])</ClButton>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <ClInput @bind-Value="@(_maxCalibration[sensor])"></ClInput>
+                    <ClButton @onclick="@(_ => SetLimit(_sensor[sensor], "SetMax", _maxCalibration[sensor]))">@(Localizer["set max"])</ClButton>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <ClButton @onclick="@(_ => GetData(_sensor[sensor]))">@(Localizer["request data"])</ClButton>
+                    <ClButton @onclick="@(_ => GetMoisture(_sensor[sensor]))">@(Localizer["request moisture"])</ClButton>
+                </div>
+                <ul class="text-center">
+                    @foreach (var item in _data[sensor])
+                    {
+                        <li>@item.Value</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+
+@code
+{
+    private Dictionary<int, List<DataPoint<double>>> _data = new Dictionary<int, List<DataPoint<double>>>();
+    private int _plantCount = 2;
+
+    private List<string> _minCalibration = new()
+    {
+        "0",
+        "0",
+    };
+
+    private List<string> _maxCalibration = new()
+    {
+        "0",
+        "0",
+    };
+
+    private List<MqttApplicationMessageBuilder> _sensor = new()
+    {
+        new MqttApplicationMessageBuilder().WithTopic("Plant/Moisture/0/Command/"),
+        new MqttApplicationMessageBuilder().WithTopic("Plant/Moisture/1/Command/"),
+    };
+
+    private async Task GetMoisture(MqttApplicationMessageBuilder builder)
+    {
+        var message = builder.WithPayload("GetMoisture").Build();
+        var result = await Controler.MqttClient.PublishAsync(message);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GetData(MqttApplicationMessageBuilder builder)
+    {
+        var message = builder.WithPayload("GetData").Build();
+        var result = await Controler.MqttClient.PublishAsync(message);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetLimit(MqttApplicationMessageBuilder builder, string payload, string limit)
+    {
+        var message = builder.WithPayload(payload + limit).Build();
+        var result = await Controler.MqttClient.PublishAsync(message);
+    }
+
+    private async Task GetLimit(MqttApplicationMessageBuilder builder, string payload)
+    {
+        var message = builder.WithPayload(payload).Build();
+        var result = await Controler.MqttClient.PublishAsync(message);
+    }
+
+
+
+    protected override void OnInitialized()
+    {
+        _data = Enumerable.Range(0, _plantCount)
+            .ToDictionary(k => k, v => new List<DataPoint<double>>());
+
+        Controler.MqttClient.UseApplicationMessageReceivedHandler(e =>
+           {
+               var topic = e.ApplicationMessage;
+               foreach (var i in Enumerable.Range(0, _plantCount))
+                   topic.SubscribeToInt($"Plant/Moisture/{i}/Config", v => IntDataPoint(i, v)); 
+
+               foreach (var i in Enumerable.Range(0, _plantCount))
+                   topic.SubscribeToDouble($"Plant/Moisture/{i}/", v => ReceiveDataPoint(i, v));
+
+           });
+    }
+
+    private void ReceiveDataPoint(int id, double value)
+    {
+        _data[id].Add(new DataPoint<double>(value));
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void IntDataPoint(int id, int value)
+    {
+        _data[id].Add(new DataPoint<double>((double)value));
+        InvokeAsync(StateHasChanged);
+    }
+}

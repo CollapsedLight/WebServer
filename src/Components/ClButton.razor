@@ -1,0 +1,33 @@
+
+<div name="@nameof(ClButton)" class="@(_class)">
+    <button class="text-lg w-full h-8 bg-primary hover:drop-shadow-md text-primary-on rounded-lg text-gray-200" @onclick="@(OnClick)">
+        @(ChildContent)
+    </button>
+</div>
+
+@code
+{
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    /// <summary>
+    ///     Callback event of the button
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _class = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+    }
+}

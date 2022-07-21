@@ -1,0 +1,21 @@
+﻿@using CollapsedLight.WebApp.Components
+@inherits LayoutComponentBase
+
+@inject IStringLocalizer Localizer;
+
+<PageTitle>Collapsed Light Play Server</PageTitle>
+<div class="flex flex-col bg-background">
+    <div class="flex flex-row pt-4 border-b-2 border-tertiary w-full justify-center bg-secondary-container">
+        <ClGroupLink Link="fuel-tracker">@(Localizer["fuel"])</ClGroupLink>
+        <ClGroupLink Link="weight-tracker">@(Localizer["weight"])</ClGroupLink>
+        <ClGroupLink Link="raised-bed">@(Localizer["raised bed"])</ClGroupLink>
+        <ClGroupLink Link="localization">@(Localizer["localization"])</ClGroupLink>
+    </div>
+    <main class="h-full">
+        <content>
+            <div class="h-inner bg-gradient-to-b from-secondary-container to-tertiary overflow-hidden">
+                @Body
+            </div>
+        </content>
+    </main>
+</div>

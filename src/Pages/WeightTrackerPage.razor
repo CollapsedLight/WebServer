@@ -1,0 +1,91 @@
+﻿@page "/weight-tracker"
+
+@using ChartJs.Blazor;
+@using ChartJs.Blazor.Common.Axes
+@using ChartJs.Blazor.Common.Axes.Ticks
+@using ChartJs.Blazor.Util;
+@using ChartJs.Blazor.Common;
+@using ChartJs.Blazor.LineChart;
+@using CollapsedLight.WebApp.Service;
+@inject IWeightDataService WeightService;
+
+<div class="flex flex-col place-content-center h-inner gap-4">
+    <div class="w-full h-fit">
+        <ChartJs.Blazor.Chart @ref="_chart" Config="@_config"></ChartJs.Blazor.Chart>
+    </div>
+    <div class="grid grid-cols-1 justify-items-center gap-2">
+
+        <input type="number" @bind="@_weight" class="h-10 text-lg rounded-lg shadow text-center" />
+        <ClButton class="w-40" @onclick="@(() => AddWeight(_weight))">
+            <i class="inline mr-4 fas fa-weight" />
+            <p class="inline">Hinzufügen</p>
+        </ClButton>
+    </div>
+</div>
+
+
+
+@code {
+    private float _weight;
+    private LineConfig _config;
+    private Chart _chart;
+
+    public void AddWeight(float weight)
+    {
+        WeightService.AddWeight(weight);
+        var dataset = new LineDataset<float>(WeightService.GetWeight(TimeSpan.FromDays(10)))
+        {
+            BorderColor = ColorUtil.ColorHexString(80, 128, 240)
+        };
+        ((LineDataset<float>)_config.Data.Datasets[0]).Add(weight);
+        _config.Data.Labels.Add(DateTime.Now.ToString());
+        _chart.Update();
+    }
+
+    public string[] Values()
+        => WeightService.GetWeight(TimeSpan.FromMinutes(30)).Select(x => x.ToString()).ToArray();
+
+    protected override void OnParametersSet()
+        => LoadChart();
+
+    protected void LoadChart()
+    {
+        var values = WeightService.GetAll();
+        _weight = values.Last().Weight;
+        _config = new LineConfig
+        {
+            Options = new LineOptions
+            {
+                Scales = new Scales
+                {
+                    YAxes = new List<CartesianAxis>()
+                    {
+                        new LinearCartesianAxis{
+                            Ticks = new LinearCartesianTicks
+                        {
+                            Max = 100,
+                            Min = 60,
+                        }
+                        }
+                    }
+                },
+                Responsive = true,
+                Title = new OptionsTitle
+                {
+                    Display = true,
+                    Text = "Gewicht"
+                },
+            },
+        };
+        foreach (var blaa in values.Select(x => x.DateTime.ToString()))
+            _config.Data.Labels.Add(blaa);
+
+        var dataset = new LineDataset<float>(WeightService.GetWeight(TimeSpan.FromDays(10)))
+        {
+            BorderColor = ColorUtil.ColorHexString(80, 128, 240)
+        };
+
+        _config.Data.Datasets.Add(dataset);
+    }
+
+}

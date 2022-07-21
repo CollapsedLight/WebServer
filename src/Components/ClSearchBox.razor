@@ -1,0 +1,60 @@
+﻿@using System.Timers
+<div name="@nameof(ClSearchBox)" class="@(_class) flex grow self-center items-center gap-2">
+    <i class="fa-regular fa-search"></i>
+    <input class="pl-1 flex-1 w-28 bg-transparent border-b-2 focus:border-0 focus:bg-primary-on border-background-outline" @oninput="@(Search)"/>
+</div>
+
+@code {
+    /// <summary>
+    ///     Callback event of the input field. Event debounce time is set by <see cref="Debounce"/>
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnInput { get; set; }
+
+    /// <summary>
+    ///     Debounce time of the input field. Default = 250ms
+    /// </summary>
+    [Parameter]
+    public int Debounce { get; set; } = 250;
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _class = string.Empty;
+    private string _searchField = string.Empty;
+    private Timer _searchTimer;
+
+    protected override void OnParametersSet()
+    {
+        if (!OnInput.HasDelegate)
+            throw new ArgumentNullException(nameof(OnInput), "Input callback must not be null");
+
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+
+        _searchTimer = new Timer(Debounce);
+        _searchTimer.AutoReset = false;
+        _searchTimer.Elapsed += SearchTimerOnElapsed;
+    }
+
+    private void Search(ChangeEventArgs args)
+    {
+        _searchField = args.Value.ToString();
+
+        if (_searchTimer.Enabled)
+            return;
+
+        _searchTimer.Start();
+    }
+
+    private void SearchTimerOnElapsed(object sender, ElapsedEventArgs e)
+    {
+        _searchTimer.Stop();
+
+        InvokeAsync(() => OnInput.InvokeAsync(_searchField));
+    }
+}

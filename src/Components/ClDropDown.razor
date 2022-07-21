@@ -1,0 +1,33 @@
+﻿<div name="@nameof(ClDropDown)" class="w-full h-full @(_class)">
+    <div class="group relative cursor-pointer">
+        @(Caption)
+        <div class="group-hover:block absolute right-0 hidden z-10">
+            <div class="h-full w-full top-0 p-2 gap-2 bg-primary-50 rounded shadow">
+                @(Menu)
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment Caption { get; set; }
+
+    [Parameter]
+    public RenderFragment Menu { get; set; }
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _class = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+    }
+}

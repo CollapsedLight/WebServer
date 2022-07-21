@@ -1,0 +1,147 @@
+﻿@page "/fuel-tracker"
+
+@using ChartJs.Blazor;
+@using ChartJs.Blazor.Common.Axes
+@using ChartJs.Blazor.Common.Axes.Ticks
+@using ChartJs.Blazor.Util;
+@using ChartJs.Blazor.Common;
+@using ChartJs.Blazor.LineChart;
+
+@using CollapsedLight.WebApp.Service;
+@using CollapsedLight.WebApp.Data;
+@using CollapsedLight.WebApp.Components;
+@using System.Globalization
+
+@inject IFuelService FuelService;
+
+<div class="flex flex-col place-content-center w-full h-inner">
+    <div class="w-full h-fit">
+        <ChartJs.Blazor.Chart @ref="_chart" Config="@_config"></ChartJs.Blazor.Chart>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div class="grid-col-1 h-8">
+            <ClLabel Caption="Betankung">
+                <ClInput class="w-40" @bind-Value=@(_volume) />
+            </ClLabel>
+        </div>
+        <div class="grid-col-1 h-8">
+            <ClLabel Caption="Kilometer">
+                <ClInput class="w-40" @bind-Value=@(_distance)/>
+            </ClLabel>
+        </div>
+        <div class="grid-col-1 h-8">
+            <ClLabel Caption="Preis">
+                <ClInput class="w-40" @bind-Value="@(_price)" />
+            </ClLabel>
+        </div>
+        <div class="grid-col-1 h-8">
+            <ClLabel Caption="Verbrauch" Value="@_consumption.ToString(CultureInfo.InvariantCulture)">
+                <p class="w-40">@(_consumption)</p>
+            </ClLabel>
+        </div>
+    </div>
+
+    <div class="flex pt-4 justify-center rounded">
+        <input type="date" @oninput="@(e => _date = DateTime.Parse(e.Value.ToString()))" id="datepicker"/>
+    </div>
+
+    <div class="flex pt-8 justify-center">
+        <ClButton class="w-40" OnClick="@(async _ => await Calculate())">Berechnen</ClButton>
+    </div>
+</div>
+
+@code
+{
+    private string _distance;
+    private string _volume;
+    private double _consumption;
+    private string _price;
+    private DateTime _date;
+
+    private MileageDataRecord? _activeRecord;
+
+    private LineConfig _config;
+    private Chart _chart;
+
+    private async ValueTask Calculate()
+    {
+        var vol = ParseDouble(_volume);
+        var dist = ParseDouble(_distance);
+        _consumption = vol * 100 / dist;
+        if (_date != default)
+            _activeRecord = new MileageDataRecord(_date, vol, dist, ParseDouble(_price), _consumption);
+        else
+            _activeRecord = new MileageDataRecord(vol, dist, ParseDouble(_price), _consumption);
+
+        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+
+        FuelService.PushRecord(_activeRecord);
+
+        var dataset = new LineDataset<double>(FuelService.Get(10).Select(x => x.Consumption))
+        {
+            BorderColor = ColorUtil.ColorHexString(80, 128, 240)
+        };
+
+        ((LineDataset<double>)_config.Data.Datasets[0]).Add(_consumption);
+        _config.Data.Labels.Add(_activeRecord.Date.ToString());
+
+        await _chart.Update();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _price = 1.2.ToString();
+        LoadChart();
+    }
+
+    private double ParseDouble(string value)
+    {
+        if (!double.TryParse(value, out var ret))
+            return 0.0;
+
+        return ret;
+    }
+
+    private void LoadChart()
+    {
+        var values = FuelService.Get(10).OrderBy(x => x.Date);
+        var max = values.Max(x => x.Consumption) + 3;
+        var min = Math.Max(values.Min(x => x.Consumption) - 3, 0);
+        _config = new LineConfig
+        {
+            Options = new LineOptions
+            {
+                Scales = new Scales
+                {
+                    YAxes = new List<CartesianAxis>()
+                    {
+                        new LinearCartesianAxis{
+                            Ticks = new LinearCartesianTicks
+                        {
+                            Max = max,
+                            Min = min,
+                        }
+                        }
+                    }
+                },
+                Responsive = true,
+                Title = new OptionsTitle
+                {
+                    Display = true,
+                    Text = "Tanken"
+                },
+            },
+        };
+        foreach (var blaa in values.Select(x => x.Date.ToString()))
+            _config.Data.Labels.Add(blaa);
+
+        var dataset = new LineDataset<double>(FuelService.Get(10).Select(x => x.Consumption))
+        {
+            BorderColor = ColorUtil.ColorHexString(80, 128, 240)
+        };
+
+        _config.Data.Datasets.Add(dataset);
+    }
+
+
+}

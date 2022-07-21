@@ -1,0 +1,78 @@
+﻿@page "/localization"
+@using System.Globalization
+@using System.Data
+
+@inject IStringLocalizer Localizer
+@inject LocalizerService Localization;
+
+<div name="@(nameof(LocalizerPage))" class="flex flex-col gap-3 p-3">
+    <div>
+        <div class="flex flex-col p-4 gap-2">
+            <ClButton class="place-center w-68" @onclick="@(_ => Localization.SaveDatabase())">@(Localizer["save database"])</ClButton>
+            <div class="grid grid-cols-2 items-center gap-4">
+                <ClLabel class="justify-self-end w-full" Caption="@(Localizer["row tag"])">
+                    <ClInput class="self-center" @bind-Value="@(_newRow)"/>
+                </ClLabel>
+                <ClButton @onclick="@(async _ => await AddTextRow())">@(Localizer["add localization row"])</ClButton>
+            </div>
+        </div>
+
+        <table class="w-full border border-separate bg-primary-100">
+            <tr>
+                @foreach (var col in Enumerable.Range(0, _localizedTexts.Columns.Count))
+                {
+                    <th class="border border-primary-300">@(_localizedTexts.Columns[col].Caption)</th>
+                }
+            </tr>
+            @foreach (var row in Enumerable.Range(0, _localizedTexts.Rows.Count))
+            {
+                <tr>
+                    @foreach (var col in Enumerable.Range(0, _localizedTexts.Columns.Count))
+                    {
+                        <td class="p-1 border border-primary-300">
+                            @switch (_localizedTexts.Rows[row][col])
+                            {
+                                case int s:
+                                    <p class="w-full pr-1 min-w-[2rem] text-right font-mono font-bold">
+                                        @(s)
+                                    </p>
+                                    break;
+                                case TextTag tag:
+                                        <input class="w-full bg-transparent text-background-on" @bind="@(tag.Name)" />
+                                    break;
+                                case TextLocalized text:
+                                        <input class="w-full bg-transparent" @bind="@(text.Name)" />
+                                    break;
+                                default:
+                                    break;
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </table>
+    </div>
+</div>
+
+
+@code
+{
+    private string _newRow = string.Empty;
+    private DataTable _localizedTexts;
+
+    protected override void OnInitialized()
+    {
+        _localizedTexts = Localization.CreateCompleteTable();
+    }
+
+    private async Task AddTextRow()
+    {
+        if (string.IsNullOrWhiteSpace(_newRow))
+            return;
+
+        Localization.AddNewTextRow(_newRow);
+        _newRow = string.Empty;
+        await InvokeAsync(StateHasChanged);
+        _localizedTexts = Localization.CreateCompleteTable();
+    }
+}

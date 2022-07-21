@@ -1,0 +1,36 @@
+﻿<div name="@nameof(ClLabel)" class="@(_class)">
+    <div class="flex flex-row gap-2">
+        <p class="basis-1/2 text-background-on text-lg font-semibold text-right">
+            @Caption
+        </p>
+        @if(ChildContent != null)
+        {
+            <div class="basis-1/2 text-background-on rounded-lg mx-1 text-right text-md pr-2">
+                @(ChildContent)
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Caption { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _class = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+    }
+}

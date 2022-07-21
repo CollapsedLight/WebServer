@@ -1,0 +1,45 @@
+﻿@typeparam TList
+
+<div name="@nameof(ClDropDownList<TList>)" class="w-full h-full">
+    <DropDown class="@(_class)">
+        <Caption>
+            @(Caption)
+        </Caption>
+        <Menu>
+            <ul class="flex flex-col h-full w-full gap-2 ">
+                @foreach (var item in Items)
+                {
+                    <li class="hover:bg-primary-200">
+                        @(Template(item))
+                    </li>
+                }
+            </ul>
+        </Menu>
+    </DropDown>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment Caption { get; set; }
+
+    [Parameter]
+    public RenderFragment<TList> Template { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<TList> Items { get; set; }
+
+    /// <summary>
+    ///     Capture additional html attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _class = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _class = string.Empty;
+        if (AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var obj))
+            _class = Convert.ToString(obj);
+    }
+}
